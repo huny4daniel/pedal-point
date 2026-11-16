@@ -1,0 +1,32 @@
+# 발표자료 표지 디자인 기반 테마
+#   배경   #0F2A1F (짙은 숲 초록)
+#   강조   #2FBF71 (밝은 초록)
+#   본문   #F4F6F0 (오프화이트)
+#   보조   #B9D4C6 (민트 회색)
+#   글꼴   Noto Sans KR
+
+[server]
+runOnSave = false
+
+[client]
+toolbarMode = "minimal"
+
+[theme]
+base = "dark"
+primaryColor = "#2FBF71"
+backgroundColor = "#0F2A1F"
+secondaryBackgroundColor = "#173A2B"
+textColor = "#F4F6F0"
+linkColor = "#2FBF71"
+borderColor = "#2A4D3C"
+dataframeBorderColor = "#2A4D3C"
+showWidgetBorder = true
+baseRadius = "10px"
+font = "Noto Sans KR:https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap, sans-serif"
+headingFontWeights = [900, 700, 700, 700, 700, 700]
+chartCategoricalColors = ["#2FBF71", "#B9D4C6", "#17804A", "#E6EFE9", "#6FD9A0"]
+
+[theme.sidebar]
+backgroundColor = "#0B2118"
+secondaryBackgroundColor = "#143326"
+borderColor = "#1F3D30"
