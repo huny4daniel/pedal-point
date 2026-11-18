@@ -13,6 +13,8 @@
 | DB 연결 | pymysql |
 
 ```
+run.bat              원클릭 실행 (환경 준비 → DB 생성 → 앱 실행)
+init_db.py           DB 생성 스크립트 (--reset 시 지우고 새로 생성)
 db/schema.sql        padal DB 생성 (테이블 7개, FK 10개, 뷰 1개, CHECK 제약)
 db/sample_data.sql   샘플 데이터 (대여소 7, 자전거 30, 이용자 8, 관리자 3, 대여 19)
 app/main.py          진입점 (로그인 → 이용자/관리자 화면)
@@ -20,27 +22,26 @@ app/rules.py         요금·마일리지 기준값과 계산식
 app/user_ops.py      이용자 기능 SQL (대여·반납·결제는 트랜잭션)
 app/admin_ops.py     관리자 기능 SQL
 app/views/           화면 7개
-.streamlit/          테마(발표자료 표지 디자인 기반)와 DB 접속 설정
+.streamlit/          밝은 테마(Pretendard, 숲 초록 강조)와 DB 접속 설정
 ```
 
 ## 실행 방법
 
-1. DB 만들기 — **`schema.sql`은 기존 padal DB를 삭제하고 새로 만든다.**
-   ```
-   mysql -u root -p < db/schema.sql
-   mysql -u root -p < db/sample_data.sql
-   ```
-2. 패키지 설치
-   ```
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-3. `.streamlit/secrets.toml.example`을 `.streamlit/secrets.toml`로 복사해 MySQL 접속 정보 입력
-4. 프로젝트 루트에서 실행
-   ```
-   streamlit run app/main.py
-   ```
+준비물: Python 3.11 이상, 실행 중인 MySQL 8.0 서버
+
+**`run.bat`을 더블클릭한다.** 처음 실행하면 아래를 자동으로 처리한다.
+
+1. `.venv` 가상환경 생성과 패키지 설치 (`requirements.txt`가 바뀌면 다시 설치)
+2. `.streamlit/secrets.toml`이 없으면 예시를 복사하고 메모장을 연다 → MySQL 비밀번호 입력 후 저장하고 닫기
+3. padal DB가 없으면 `schema.sql` + `sample_data.sql`로 생성 (mysql 클라이언트 불필요)
+4. Streamlit 실행 (브라우저가 자동으로 열림)
+
+두 번째부터는 바로 4번으로 넘어간다.
+
+DB를 샘플 데이터 상태로 되돌리려면 (**기존 padal DB를 삭제한다**)
+```
+run.bat --reset
+```
 
 ## 화면
 
