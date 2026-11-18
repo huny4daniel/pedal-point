@@ -9,7 +9,8 @@
 | 구분 | 내용 |
 |---|---|
 | DBMS | MySQL 8.0 (8.0.16 이상, CHECK 제약 사용) |
-| GUI | Python + Streamlit |
+| GUI | Python + Streamlit (이용자·관리자 웹) |
+| 스마트폰 앱 | Android WebView 앱 (Kotlin, 이용자 전용) |
 | DB 연결 | pymysql |
 
 ```
@@ -23,6 +24,7 @@ app/user_ops.py      이용자 기능 SQL (대여·반납·결제는 트랜잭�
 app/admin_ops.py     관리자 기능 SQL
 app/views/           화면 7개
 .streamlit/          밝은 테마(Pretendard, 숲 초록 강조)와 DB 접속 설정
+android/             이용자 스마트폰 앱 (WebView 하이브리드), build_apk.bat로 빌드
 ```
 
 ## 실행 방법
@@ -42,6 +44,20 @@ DB를 샘플 데이터 상태로 되돌리려면 (**기존 padal DB를 삭제한
 ```
 run.bat --reset
 ```
+
+## 스마트폰 앱 (이용자)
+
+이용자는 스마트폰 앱으로, 관리자는 PC 웹으로 쓴다. 앱은 PC의 Streamlit 서버 화면을 띄우는
+하이브리드 구조이고, 대여·반납·결제·마일리지 처리는 모두 서버와 padal DB에서 이뤄진다.
+앱으로 접속하면(User-Agent의 `PedalPointApp`) 서버가 이용자 전용 모바일 화면(하단 탭)을 보여준다.
+PC 브라우저에서 주소 끝에 `?app=1`을 붙여도 같은 모바일 화면을 볼 수 있다.
+
+1. **APK 빌드**: `android\build_apk.bat` 실행 → `android\PedalPoint.apk` (Android SDK, JDK 17 또는 21 필요)
+2. **설치**: APK를 휴대폰에 옮겨 설치하거나, USB 디버깅 연결 후 `adb install -r android\PedalPoint.apk`
+3. **접속**: PC에서 `run.bat` 실행 → 터미널의 `Network URL`(예: `http://192.168.0.12:8501`)을 앱 첫 화면에 입력
+   - 휴대폰과 PC가 같은 Wi-Fi에 있어야 한다. 학교 Wi-Fi가 기기 간 접속을 막으면 휴대폰 핫스팟에 PC를 연결한다
+   - 처음 실행 때 Windows 방화벽 창이 뜨면 Python을 허용한다
+   - 서버 주소는 앱의 뒤로가기 메뉴나 연결 실패 화면의 "서버 주소 변경"에서 바꾼다
 
 ## 화면
 

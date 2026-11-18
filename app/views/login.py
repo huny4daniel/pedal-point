@@ -28,17 +28,23 @@ def _hero() -> None:
 
 
 def render() -> None:
-    hero, form = st.columns([1.25, 1], gap="large", vertical_alignment="center")
+    app = ui.is_app()
+    if app:  # 스마트폰 앱: 한 칸, 이용자 전용
+        hero, form = st.container(), st.container()
+    else:
+        hero, form = st.columns([1.25, 1], gap="large", vertical_alignment="center")
     with hero:
         _hero()
 
     with form, st.container(key="ppcard_login"):
         st.markdown(
             '<div class="pp-login-title">시작하기</div>'
-            '<div class="pp-login-sub">사용자 구분을 고르고 계정을 선택해 들어가세요.</div>',
+            '<div class="pp-login-sub">'
+            + ("계정을 선택해 들어가세요." if app else "사용자 구분을 고르고 계정을 선택해 들어가세요.")
+            + "</div>",
             unsafe_allow_html=True,
         )
-        role = st.segmented_control(
+        role = "이용자" if app else st.segmented_control(
             "사용자 구분", ["이용자", "관리자"], default="이용자", key="login_role",
             label_visibility="collapsed", width="stretch",
         )

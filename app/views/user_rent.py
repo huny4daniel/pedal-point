@@ -72,26 +72,37 @@ def render() -> None:
     if msg := st.session_state.pop("rent_done", None):
         ui.done(msg, "반납은 ‘반납·결제’ 메뉴에서 할 수 있습니다.")
 
-    c1, c2 = st.columns([1, 2])
+    c1, c2 = st.columns([1, 2]) if not ui.is_app() else st.columns([1, 1.6])
     region = c1.selectbox("지역", ["전체", *user_ops.regions()])
-    keyword = c2.text_input("대여소 이름", placeholder="대여소 이름으로 검색 (예: 정왕)",
+    keyword = c2.text_input("대여소 이름", placeholder="이름으로 검색 (예: 정왕)",
                             icon=":material/search:")
     stations = user_ops.search_stations(None if region == "전체" else region, keyword.strip())
 
     sel_id = st.session_state.get("rent_station")
     by_id = {s["station_id"]: s for s in stations}
 
+    if not stations:
+        with st.container(key="ppcard_nostation"):
+            ui.empty("🔍", "조건에 맞는 대여소가 없어요", "지역이나 검색어를 바꿔 보세요.")
+        return
+
+    if ui.is_app():  # 스마트폰 앱: 한 줄 목록, 선택한 대여소 바로 아래에 대여 패널
+        st.markdown(f'<div class="pp-card-sub">운영 중인 대여소 {len(stations)}곳</div>',
+                    unsafe_allow_html=True)
+        for s in stations:
+            selected = s["station_id"] == sel_id
+            _station_card(s, selected)
+            if selected:
+                _rent_panel(user_id, s)
+        return
+
     left, right = st.columns([1.7, 1], gap="large")
     with left:
-        if not stations:
-            with st.container(key="ppcard_nostation"):
-                ui.empty("🔍", "조건에 맞는 대여소가 없어요", "지역이나 검색어를 바꿔 보세요.")
-        else:
-            st.markdown(f'<div class="pp-card-sub">운영 중인 대여소 {len(stations)}곳</div>',
-                        unsafe_allow_html=True)
-            cols = st.columns(2)
-            for i, s in enumerate(stations):
-                with cols[i % 2]:
-                    _station_card(s, s["station_id"] == sel_id)
+        st.markdown(f'<div class="pp-card-sub">운영 중인 대여소 {len(stations)}곳</div>',
+                    unsafe_allow_html=True)
+        cols = st.columns(2)
+        for i, s in enumerate(stations):
+            with cols[i % 2]:
+                _station_card(s, s["station_id"] == sel_id)
     with right:
         _rent_panel(user_id, by_id.get(sel_id))

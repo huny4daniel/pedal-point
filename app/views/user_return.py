@@ -44,7 +44,10 @@ def render() -> None:
             ui.empty("🅿️", "대여 중인 자전거가 없어요", "‘대여소 검색·대여’ 메뉴에서 자전거를 빌릴 수 있습니다.")
         return
 
-    left, right = st.columns([1.35, 1], gap="large")
+    if ui.is_app():  # 스마트폰 앱: 입력 카드 다음에 결제 요약
+        left, right = st.container(), st.container()
+    else:
+        left, right = st.columns([1.35, 1], gap="large")
 
     with left:
         with st.container(key="ppcard_return"):

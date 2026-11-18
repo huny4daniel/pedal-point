@@ -213,8 +213,107 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 """
 
 
+APP_CSS = """
+<style>
+/* ---- 스마트폰 앱(WebView) 모드: 이용자 전용 모바일 레이아웃 ---- */
+header[data-testid="stHeader"], [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"],
+[data-testid="stExpandSidebarButton"], [data-testid="stToolbar"], [data-testid="stStatusWidget"] {
+  display: none !important;
+}
+.block-container, [data-testid="stMainBlockContainer"] {
+  max-width: 480px; padding: .6rem 1rem calc(6.2rem + env(safe-area-inset-bottom)) 1rem !important;
+}
+.pp-head { margin-bottom: 1rem; }
+.pp-eyebrow { display: none; }
+.pp-title { font-size: 1.45rem; }
+.pp-sub { font-size: .88rem; }
+[class*="st-key-ppcard_"] { border-radius: 16px; padding: 1.05rem 1.1rem; }
+.pp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+.pp-stat { padding: .9rem 1rem; border-radius: 16px; }
+.pp-stat-value { font-size: 1.3rem; }
+.pp-stat-label { font-size: .78rem; }
+.stButton button, .stFormSubmitButton button { min-height: 48px; }
+[data-testid="stTabs"] [role="tablist"] { width: 100%; }
+[data-testid="stTab"] { flex: 1 1 0; justify-content: center; padding: 0 .4rem !important; }
+
+/* 상단 바 */
+.st-key-ppbar {
+  position: sticky; top: 0; z-index: 999; background: var(--pp-bg);
+  padding: .45rem 0 .55rem 0; margin-bottom: .2rem; gap: .5rem;
+}
+.pp-bar-brand { display: flex; align-items: center; gap: .5rem; font-weight: 800; font-size: 1.05rem;
+                color: var(--pp-ink); letter-spacing: -0.02em; }
+.pp-bar-brand img { width: 28px; height: 28px; }
+.pp-bar-user { font-size: .85rem; color: var(--pp-ink-2); font-weight: 600; white-space: nowrap; }
+.st-key-ppbar .stButton button { min-height: 36px; width: 36px; padding: 0; border-radius: 50%;
+                                  background: #fff; border: 1px solid var(--pp-line); }
+
+/* 하단 탭 */
+.st-key-ppnav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 1000;
+  width: 100%; max-width: 480px; gap: 0 !important;
+  background: rgba(255,255,255,.96); backdrop-filter: blur(8px);
+  border-top: 1px solid var(--pp-line); box-shadow: 0 -4px 18px rgba(15,26,21,.06);
+  padding: .35rem .5rem calc(.35rem + env(safe-area-inset-bottom)) .5rem;
+}
+.st-key-ppnav > [data-testid="stElementContainer"], .st-key-ppnav > div { flex: 1 1 0; min-width: 0; }
+.st-key-ppnav [data-testid="stPageLink"] a {
+  flex-direction: column; justify-content: center; gap: .1rem; padding: .35rem 0;
+  border-radius: 12px; background: transparent !important;
+}
+.st-key-ppnav [data-testid="stPageLink"] a p { font-size: .74rem; font-weight: 600; color: var(--pp-muted); }
+.st-key-ppnav [data-testid="stPageLink"] a [data-testid="stIconMaterial"] { font-size: 1.45rem; color: var(--pp-muted); }
+.st-key-ppnav [class*="_on"] [data-testid="stPageLink"] a p,
+.st-key-ppnav [class*="_on"] [data-testid="stPageLink"] a [data-testid="stIconMaterial"] { color: var(--pp-green); }
+
+/* 로그인 */
+.pp-hero { min-height: 0; padding: 1.5rem 1.4rem 1.3rem 1.4rem; border-radius: 22px; margin-bottom: 1rem; }
+.pp-hero-title { font-size: 1.75rem; margin: 1.3rem 0 .6rem 0; }
+.pp-hero-desc { font-size: .88rem; }
+.pp-hero-bike { display: none; }
+.pp-hero-steps { padding-top: 1.2rem; gap: .45rem; }
+.pp-hero-step { padding: .6rem .7rem; min-width: 0; flex: 1 1 0; }
+.pp-hero-step b { font-size: .9rem; }
+.pp-hero-step span { font-size: .7rem; }
+
+/* 목록 */
+.pp-list { display: flex; flex-direction: column; gap: .55rem; }
+.pp-item { background: var(--pp-surface); border: 1px solid var(--pp-line); border-radius: 14px;
+           padding: .8rem .95rem; }
+.pp-item-top { display: flex; justify-content: space-between; align-items: center; gap: .6rem; }
+.pp-item-title { font-weight: 700; color: var(--pp-ink); font-size: .95rem; letter-spacing: -0.02em;
+                 min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-item-value { font-weight: 800; font-size: 1rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pp-item-value.plus { color: var(--pp-green); }
+.pp-item-sub { color: var(--pp-muted); font-size: .8rem; margin-top: .25rem; }
+</style>
+"""
+
+
+def is_app() -> bool:
+    """스마트폰 앱(User-Agent에 PedalPointApp)이나 ?app=1 로 접속했는지. 세션 동안 유지한다."""
+    if "app_mode" not in st.session_state:
+        try:
+            ua = st.context.headers.get("User-Agent", "")
+        except Exception:
+            ua = ""
+        st.session_state["app_mode"] = "PedalPointApp" in ua or st.query_params.get("app") == "1"
+    return st.session_state["app_mode"]
+
+
 def apply_style() -> None:
-    st.markdown(CSS, unsafe_allow_html=True)
+    st.markdown(CSS + (APP_CSS if is_app() else ""), unsafe_allow_html=True)
+
+
+def list_items(items: list[tuple]) -> None:
+    """모바일 목록. items: (제목 HTML, 오른쪽 값 HTML, 보조 문구, 값 강조 여부)"""
+    html = "".join(
+        f'<div class="pp-item"><div class="pp-item-top"><div class="pp-item-title">{title}</div>'
+        f'<div class="pp-item-value{" plus" if plus else ""}">{value}</div></div>'
+        f'<div class="pp-item-sub">{sub}</div></div>'
+        for title, value, sub, plus in items
+    )
+    st.markdown(f'<div class="pp-list">{html}</div>', unsafe_allow_html=True)
 
 
 def _data_uri(name: str) -> str:

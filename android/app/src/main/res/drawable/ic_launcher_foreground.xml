@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 로고(app/assets/logo_icon.svg)의 자전거를 108dp 적응형 아이콘 안전 영역에 맞춘 것 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="36"
+    android:viewportHeight="36">
+    <group
+        android:scaleX="0.62"
+        android:scaleY="0.62"
+        android:pivotX="18"
+        android:pivotY="18"
+        android:translateY="-1.2">
+        <path
+            android:pathData="M11.5,22m-5.2,0a5.2,5.2 0,1 1,10.4 0a5.2,5.2 0,1 1,-10.4 0"
+            android:strokeWidth="2.4"
+            android:strokeColor="#12B76A"
+            android:fillColor="#00000000" />
+        <path
+            android:pathData="M24.5,22m-5.2,0a5.2,5.2 0,1 1,10.4 0a5.2,5.2 0,1 1,-10.4 0"
+            android:strokeWidth="2.4"
+            android:strokeColor="#12B76A"
+            android:fillColor="#00000000" />
+        <path
+            android:pathData="M11.5,22 L16,13.5 H23 L24.5,22 M16,13.5 L18.2,22 L23,13.5 M14.5,11 H18"
+            android:strokeWidth="2"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:fillColor="#00000000" />
+    </group>
+</vector>
