@@ -13,14 +13,13 @@ BIKE_STATUSES = ["AVAILABLE", "MAINTENANCE"]
 
 
 def _flash(key: str) -> None:
-    if msg := st.session_state.pop(key, None):
-        st.success(msg)
+    ui.flash(key)
 
 
 def _station_form(prefix: str, s: dict | None) -> dict | None:
     """등록·수정 공용 입력 폼. 제출되면 입력값 dict, 아니면 None."""
     s = s or {}
-    with st.form(f"{prefix}_station_form", clear_on_submit=s == {}):
+    with st.form(f"{prefix}_station_form", clear_on_submit=s == {}, border=False):
         c1, c2 = st.columns(2)
         name = c1.text_input("대여소 이름 *", s.get("station_name", ""), max_chars=100)
         region = c2.text_input("지역명 *", s.get("station_region", ""), max_chars=50)
@@ -38,7 +37,7 @@ def _station_form(prefix: str, s: dict | None) -> dict | None:
             index=STATION_STATUSES.index(s.get("station_status", "ACTIVE")),
             format_func=ui.STATION_STATUS_LABELS.get,
         )
-        submitted = st.form_submit_button("저장" if s else "등록", type="primary")
+        submitted = st.form_submit_button("저장" if s else "등록", type="primary", width="stretch")
     if not submitted:
         return None
     return {
@@ -64,10 +63,11 @@ def _stations_tab() -> None:
         "정비중": [int(s["maintenance_count"] or 0) for s in stations],
         "운영 상태": [ui.STATION_STATUS_LABELS[s["station_status"]] for s in stations],
     }), hide_index=True, width="stretch")
+    st.write("")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("#### 대여소 등록")
+    c1, c2 = st.columns(2, gap="medium")
+    with c1, st.container(key="ppcard_station_new"):
+        ui.card_title("대여소 등록", "* 표시는 필수 입력입니다.")
         data = _station_form("new", None)
         if data:
             try:
@@ -77,8 +77,8 @@ def _stations_tab() -> None:
             else:
                 st.session_state["station_msg"] = f"대여소를 등록했습니다 (ID {sid})."
                 st.rerun()
-    with c2:
-        st.markdown("#### 대여소 수정 · 운영 상태 변경")
+    with c2, st.container(key="ppcard_station_edit"):
+        ui.card_title("대여소 수정 · 운영 상태 변경", "수정할 대여소를 고른 뒤 값을 바꾸고 저장하세요.")
         by_id = {s["station_id"]: s for s in stations}
         sid = st.selectbox("수정할 대여소", list(by_id),
                            format_func=lambda i: f"{by_id[i]['station_name']} (ID {i})")
@@ -111,14 +111,15 @@ def _bicycles_tab() -> None:
         "현재 대여소": [b["station_name"] or "- (대여 중)" for b in bikes],
         "등록일": [ui.dt(b["bicycle_registered_at"]) for b in bikes],
     }), hide_index=True, width="stretch", height=320)
+    st.write("")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("#### 자전거 등록")
-        with st.form("new_bike_form"):
+    c1, c2 = st.columns(2, gap="medium")
+    with c1, st.container(key="ppcard_bike_new"):
+        ui.card_title("자전거 등록", "새 자전거를 대여소에 배치합니다.")
+        with st.form("new_bike_form", border=False):
             station_id = st.selectbox("배치할 대여소", list(st_names), format_func=st_names.get)
             status = st.selectbox("상태", BIKE_STATUSES, format_func=ui.label)
-            if st.form_submit_button("등록", type="primary"):
+            if st.form_submit_button("등록", type="primary", width="stretch"):
                 try:
                     bid = admin_ops.register_bicycle(station_id, status)
                 except BusinessError as e:
@@ -126,17 +127,17 @@ def _bicycles_tab() -> None:
                 else:
                     st.session_state["bike_msg"] = f"자전거 #{bid}를 등록했습니다."
                     st.rerun()
-    with c2:
-        st.markdown("#### 상태 변경 (대여가능 ↔ 정비중)")
+    with c2, st.container(key="ppcard_bike_status"):
+        ui.card_title("자전거 상태 변경", "대여가능 ↔ 정비중 (대여 중인 자전거는 제외)")
         changeable = [b for b in admin_ops.all_bicycles() if b["bicycle_status"] != "RENTED"]
         by_id = {b["bicycle_id"]: b for b in changeable}
-        with st.form("bike_status_form"):
+        with st.form("bike_status_form", border=False):
             bid = st.selectbox(
                 "자전거", list(by_id),
                 format_func=lambda i: f"#{i} · {ui.label(by_id[i]['bicycle_status'])} · {by_id[i]['station_name']}",
             )
             new_status = st.selectbox("변경할 상태", BIKE_STATUSES, format_func=ui.label)
-            if st.form_submit_button("변경", type="primary"):
+            if st.form_submit_button("변경", type="primary", width="stretch"):
                 try:
                     admin_ops.change_bicycle_status(bid, new_status)
                 except BusinessError as e:
@@ -147,7 +148,16 @@ def _bicycles_tab() -> None:
 
 
 def render() -> None:
-    ui.page_header("ADMIN", "대여소·자전거 관리", "대여소와 자전거를 등록·수정하고 운영 상태를 바꿉니다.")
+    ui.page_header("관리자", "대여소·자전거 관리", "대여소와 자전거를 등록·수정하고 운영 상태를 바꿉니다.")
+    stations = admin_ops.all_stations()
+    bikes = admin_ops.all_bicycles()
+    count = lambda code: sum(b["bicycle_status"] == code for b in bikes)
+    ui.stat_cards([
+        ("운영 중 대여소", f"{sum(s['station_status'] == 'ACTIVE' for s in stations)}", f"/ {len(stations)}곳", True),
+        ("대여가능 자전거", f"{count('AVAILABLE')}", "대", False),
+        ("대여 중", f"{count('RENTED')}", "대", False),
+        ("정비 중", f"{count('MAINTENANCE')}", "대", False),
+    ])
     t1, t2 = st.tabs(["대여소", "자전거"])
     with t1:
         _stations_tab()

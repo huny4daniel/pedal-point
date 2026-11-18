@@ -20,16 +20,18 @@ def logout() -> None:
 def sidebar(name: str, role_label: str, extra: str = "") -> None:
     with st.sidebar:
         st.markdown(
-            '<div class="pp-brand-sub">탄소 마일리지 공공자전거</div>'
-            '<div class="pp-brand">Pedal Point</div>'
-            f'<div class="pp-who">{role_label} · <b>{name}</b>{extra}</div>',
+            f'<div class="pp-who"><div class="pp-avatar">{name[:1]}</div><div>'
+            f'<div class="pp-who-name">{name}</div>'
+            f'<div class="pp-who-role">{role_label}{extra}</div></div></div>',
             unsafe_allow_html=True,
         )
-        if st.button("로그아웃", width="stretch"):
+        if st.button("로그아웃", icon=":material/logout:", width="stretch"):
             logout()
 
 
 role = st.session_state.get("role")
+if role:
+    st.logo(str(ui.ASSETS / "logo.svg"), size="large", icon_image=str(ui.ASSETS / "logo_icon.svg"))
 
 if role == "user":
     pages = [
@@ -69,7 +71,7 @@ elif role == "admin":
     staff = get_staff(st.session_state["staff_id"])
     if not staff or not staff["staff_is_active"]:
         logout()
-    extra = f"<br>담당 대여소 · {staff['station_name']}" if staff["station_name"] else ""
+    extra = f" · {staff['station_name']}" if staff["station_name"] else ""
     sidebar(staff["staff_name"], "관리자", extra)
 
 nav.run()

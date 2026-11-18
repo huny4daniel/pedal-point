@@ -2,30 +2,45 @@
 import streamlit as st
 
 import admin_ops
+import rules
 import ui
 import user_ops
 
 
-def render() -> None:
+def _hero() -> None:
     st.markdown(
         f"""
         <div class="pp-hero">
-          <div class="pp-hero-text">
-            <div class="pp-eyebrow">탄소 마일리지 기반 공공자전거 서비스</div>
-            <div class="pp-title">Pedal Point</div>
-            <div class="pp-sub">환경을 생각한 이동이 곧 혜택이 된다</div>
-            <div class="pp-note">탄 만큼 줄어든 탄소가 마일리지로 쌓이고, 다음 이용요금에서 할인됩니다.</div>
+          <div class="pp-hero-brand"><img src="{ui.logo_icon_uri()}" alt="">Pedal Point</div>
+          <div class="pp-hero-title">환경을 생각한 이동이<br>곧 <em>혜택</em>이 된다</div>
+          <div class="pp-hero-desc">공공자전거로 이동한 거리만큼 줄어든 탄소량을 계산해
+            마일리지로 적립하고, 다음 이용요금 결제 때 할인으로 사용합니다.</div>
+          <img class="pp-hero-bike" src="{ui.bike_data_uri()}" alt="">
+          <div class="pp-hero-steps">
+            <div class="pp-hero-step"><b>1km 이동</b><span>탄소 {rules.CARBON_G_PER_KM}g 절감</span></div>
+            <div class="pp-hero-step"><b>{rules.CARBON_G_PER_POINT}g 절감</b><span>1P 적립</span></div>
+            <div class="pp-hero-step"><b>1P = 1원</b><span>다음 결제에서 할인</span></div>
           </div>
-          <img src="{ui.bike_data_uri()}" alt="자전거 일러스트">
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    left, _ = st.columns([5, 4])
-    with left:
+
+def render() -> None:
+    hero, form = st.columns([1.25, 1], gap="large", vertical_alignment="center")
+    with hero:
+        _hero()
+
+    with form, st.container(key="ppcard_login"):
+        st.markdown(
+            '<div class="pp-login-title">시작하기</div>'
+            '<div class="pp-login-sub">사용자 구분을 고르고 계정을 선택해 들어가세요.</div>',
+            unsafe_allow_html=True,
+        )
         role = st.segmented_control(
-            "사용자 구분", ["이용자", "관리자"], default="이용자", key="login_role"
+            "사용자 구분", ["이용자", "관리자"], default="이용자", key="login_role",
+            label_visibility="collapsed", width="stretch",
         )
         if role == "관리자":
             staff = admin_ops.login_staff()
@@ -34,8 +49,10 @@ def render() -> None:
                 + (f" · {s['station_name']}" if s["station_name"] else "")
                 for s in staff
             }
-            staff_id = st.selectbox("관리자 선택", list(options), format_func=options.get)
-            if st.button("관리자 화면으로 진입", type="primary", disabled=staff_id is None):
+            staff_id = st.selectbox("관리자 계정", list(options), format_func=options.get)
+            if st.button("관리자로 시작", type="primary", width="stretch",
+                         icon=":material/arrow_forward:", icon_position="right",
+                         disabled=staff_id is None):
                 st.session_state.update(role="admin", staff_id=staff_id)
                 st.rerun()
         elif role == "이용자":
@@ -45,7 +62,11 @@ def render() -> None:
                 + ("" if u["user_status"] == "ACTIVE" else f" · {ui.label(u['user_status'])}")
                 for u in users
             }
-            user_id = st.selectbox("이용자 선택", list(options), format_func=options.get)
-            if st.button("이용자 화면으로 진입", type="primary", disabled=user_id is None):
+            user_id = st.selectbox("이용자 계정", list(options), format_func=options.get)
+            if st.button("이용자로 시작", type="primary", width="stretch",
+                         icon=":material/arrow_forward:", icon_position="right",
+                         disabled=user_id is None):
                 st.session_state.update(role="user", user_id=user_id)
                 st.rerun()
+        st.markdown('<div class="pp-login-note">비밀번호 없이 사용자 ID를 골라 들어갑니다.</div>',
+                    unsafe_allow_html=True)

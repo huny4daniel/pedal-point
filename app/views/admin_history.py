@@ -10,14 +10,15 @@ import ui
 
 
 def render() -> None:
-    ui.page_header("ADMIN", "내역 조회", "대여·결제·마일리지 내역을 기간·사용자·대여소별로 검색합니다.")
+    ui.page_header("관리자", "내역 조회", "대여·결제·마일리지 내역을 기간·사용자·대여소별로 검색합니다.")
 
     users = admin_ops.all_users()
     stations = admin_ops.all_stations()
     u_names = {u["user_id"]: f"{u['user_name']} (ID {u['user_id']})" for u in users}
     s_names = {s["station_id"]: s["station_name"] for s in stations}
 
-    c1, c2, c3 = st.columns([2, 1, 1])
+    filters = st.container(key="ppcard_filters")
+    c1, c2, c3 = filters.columns([2, 1, 1])
     today = date.today()
     period = c1.date_input("기간", (today - timedelta(days=30), today), max_value=today)
     user_id = c2.selectbox("사용자", [None, *u_names],
@@ -28,6 +29,7 @@ def render() -> None:
         st.info("기간의 시작일과 종료일을 모두 선택해 주세요.")
         return
     start, end = period
+    st.write("")
 
     t1, t2, t3 = st.tabs(["대여 내역", "결제 내역", "마일리지 내역"])
 

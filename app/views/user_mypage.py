@@ -9,11 +9,11 @@ import user_ops
 
 def render() -> None:
     user_id = st.session_state["user_id"]
-    ui.page_header("MY PAGE", "마이페이지", "내 이용 기록과 마일리지, 줄인 탄소량을 확인합니다.")
+    ui.page_header("이용자", "마이페이지", "내 이용 기록과 마일리지, 지금까지 줄인 탄소량을 확인합니다.")
 
     s = user_ops.my_summary(user_id)
     ui.stat_cards([
-        ("마일리지 잔액", ui.pt(s["balance"]), "", True),
+        ("사용 가능한 마일리지", ui.pt(s["balance"]), "", True),
         ("누적 탄소 절감량", ui.carbon(s["carbon_g"]), "", False),
         ("누적 이동거리", ui.km(s["total_km"]), "", False),
         ("총 적립 / 총 사용", f"{int(s['total_earned']):,} / {int(s['total_used']):,}", "P", False),
@@ -26,16 +26,16 @@ def render() -> None:
         if rows:
             st.dataframe(pd.DataFrame({
                 "대여번호": [r["rental_id"] for r in rows],
+                "상태": [ui.label(r["rental_status"]) for r in rows],
                 "대여 시각": [ui.dt(r["rental_start_time"]) for r in rows],
                 "반납 시각": [ui.dt(r["rental_end_time"]) for r in rows],
-                "상태": [ui.label(r["rental_status"]) for r in rows],
-                "대여 대여소": [r["start_station"] for r in rows],
+                "대여소": [r["start_station"] for r in rows],
                 "반납 대여소": [r["return_station"] or "-" for r in rows],
                 "자전거": [f"#{r['rental_bicycle_id']}" for r in rows],
                 "이동거리": [ui.km(r["rental_distance"]) for r in rows],
             }), hide_index=True, width="stretch")
         else:
-            st.info("대여 내역이 없습니다.")
+            ui.empty("🚲", "대여 내역이 없습니다")
 
     with t2:
         rows = user_ops.my_payments(user_id)
@@ -52,7 +52,7 @@ def render() -> None:
                 column_config={k: st.column_config.NumberColumn(k, format="localized")
                                for k in ("이용금액(원)", "할인액(원)", "최종금액(원)")})
         else:
-            st.info("결제 내역이 없습니다.")
+            ui.empty("💳", "결제 내역이 없습니다")
 
     with t3:
         rows = user_ops.my_mileage(user_id)
@@ -67,4 +67,4 @@ def render() -> None:
             }), hide_index=True, width="stretch",
                 column_config={"포인트(P)": st.column_config.NumberColumn("포인트(P)", format="%+d")})
         else:
-            st.info("마일리지 내역이 없습니다.")
+            ui.empty("🌱", "마일리지 내역이 없습니다")

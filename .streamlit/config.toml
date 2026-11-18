@@ -1,9 +1,7 @@
-# 발표자료 표지 디자인 기반 테마
-#   배경   #0F2A1F (짙은 숲 초록)
-#   강조   #2FBF71 (밝은 초록)
-#   본문   #F4F6F0 (오프화이트)
-#   보조   #B9D4C6 (민트 회색)
-#   글꼴   Noto Sans KR
+# 밝은 모빌리티 앱 스타일 테마
+#   배경   #F4F6F5 (옅은 회녹색)   카드  #FFFFFF
+#   강조   #0A8A55 (초록)          브랜드 #0F2A1F (발표자료 표지의 숲 초록, 히어로·강조 카드)
+#   본문   #0F1A15                 글꼴  Pretendard
 
 [server]
 runOnSave = false
@@ -12,21 +10,23 @@ runOnSave = false
 toolbarMode = "minimal"
 
 [theme]
-base = "dark"
-primaryColor = "#2FBF71"
-backgroundColor = "#0F2A1F"
-secondaryBackgroundColor = "#173A2B"
-textColor = "#F4F6F0"
-linkColor = "#2FBF71"
-borderColor = "#2A4D3C"
-dataframeBorderColor = "#2A4D3C"
+base = "light"
+primaryColor = "#0A8A55"
+backgroundColor = "#F4F6F5"
+secondaryBackgroundColor = "#EEF2EF"
+textColor = "#0F1A15"
+linkColor = "#0A8A55"
+borderColor = "#DDE4E0"
+dataframeBorderColor = "#E6ECE8"
+dataframeHeaderBackgroundColor = "#F7F9F8"
 showWidgetBorder = true
 baseRadius = "10px"
-font = "Noto Sans KR:https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap, sans-serif"
-headingFontWeights = [900, 700, 700, 700, 700, 700]
-chartCategoricalColors = ["#2FBF71", "#B9D4C6", "#17804A", "#E6EFE9", "#6FD9A0"]
+buttonRadius = "10px"
+font = "Pretendard Variable:https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css, 'Malgun Gothic', sans-serif"
+headingFontWeights = [800, 700, 700, 600, 600, 600]
+chartCategoricalColors = ["#12B76A", "#0F2A1F", "#7CD4A6", "#B8C4BE", "#0A8A55"]
 
 [theme.sidebar]
-backgroundColor = "#0B2118"
-secondaryBackgroundColor = "#143326"
-borderColor = "#1F3D30"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F4F6F5"
+borderColor = "#E6ECE8"
