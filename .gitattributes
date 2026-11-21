@@ -1,0 +1,2 @@
+# Windows 배치 파일은 CRLF가 아니면 cmd가 한글 줄을 잘못 읽는다
+*.bat text eol=crlf

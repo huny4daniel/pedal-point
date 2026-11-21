@@ -2,21 +2,24 @@
 
 실행: streamlit run app/main.py  (프로젝트 루트에서)
 
-- PC 브라우저: 이용자·관리자 웹 화면
-- 스마트폰 앱(android/의 WebView 앱) 또는 주소 끝 ?app=1: 이용자 전용 모바일 화면
+- PC 화면(가로 창): 이용자·관리자 웹 화면 (사이드바 메뉴)
+- 모바일 전용 화면(세로가 더 길거나 폭 640px 이하인 창): 이용자 전용, 상단 바 + 하단 탭
+  창 크기를 바꾸면 로그인을 유지한 채 바로 전환된다. 관리자는 항상 PC 화면.
 """
 import streamlit as st
 
 import ui
-from views import admin_assets, admin_history, admin_members, login, user_mypage, user_rent, user_return
+from db import BusinessError
+from views import admin_assets, admin_history, admin_members, login, user_home, user_mypage, user_rent
 
 st.set_page_config(page_title="Pedal Point", page_icon="🚲", layout="wide")
-APP = ui.is_app()
+ui.sync_viewport()
+MOBILE = ui.is_mobile()
 ui.apply_style()
 
 
 def logout() -> None:
-    for key in ("role", "user_id", "staff_id"):
+    for key in ("role", "user_id", "staff_id", "auth_mode"):
         st.session_state.pop(key, None)
     st.rerun()
 
@@ -29,7 +32,10 @@ def sidebar(name: str, role_label: str, extra: str = "") -> None:
             f'<div class="pp-who-role">{role_label}{extra}</div></div></div>',
             unsafe_allow_html=True,
         )
-        if st.button("로그아웃", icon=":material/logout:", width="stretch"):
+        c1, c2 = st.columns(2)
+        with c1:
+            ui.theme_toggle("theme_sidebar")
+        if c2.button("로그아웃", icon=":material/logout:", width="stretch"):
             logout()
 
 
@@ -41,6 +47,7 @@ def app_bar(name: str, extra: str = "") -> None:
             unsafe_allow_html=True, width="stretch",
         )
         st.markdown(f'<div class="pp-bar-user">{name}님{extra}</div>', unsafe_allow_html=True, width="content")
+        ui.theme_toggle("theme_bar", label=False)
         if st.button("", icon=":material/logout:", key="app_logout", help="로그아웃"):
             logout()
 
@@ -55,17 +62,15 @@ def bottom_nav(pages: list, current) -> None:
 
 
 role = st.session_state.get("role")
-if APP and role == "admin":  # 앱은 이용자 전용
-    logout()
-if role and not APP:
+if role and not MOBILE:
     st.logo(str(ui.ASSETS / "logo.svg"), size="large", icon_image=str(ui.ASSETS / "logo_icon.svg"))
 
 if role == "user":
     pages = [
-        st.Page(user_rent.render, title="대여" if APP else "대여소 검색·대여",
-                icon=":material/pedal_bike:" if APP else ":material/search:", url_path="rent", default=True),
-        st.Page(user_return.render, title="반납·결제", icon=":material/payments:", url_path="return"),
-        st.Page(user_mypage.render, title="마이" if APP else "마이페이지", icon=":material/person:",
+        st.Page(user_home.render, title="홈", icon=":material/home:", url_path="home", default=True),
+        # 대여·반납은 한 메뉴: 대여 중이 아니면 대여 화면, 대여 중이면 반납·결제 화면
+        st.Page(user_rent.render, title="대여·반납", icon=":material/pedal_bike:", url_path="ride"),
+        st.Page(user_mypage.render, title="마이" if MOBILE else "마이페이지", icon=":material/person:",
                 url_path="mypage"),
     ]
 elif role == "admin":
@@ -81,27 +86,36 @@ else:
     pages = [st.Page(login.render, title="로그인", icon=":material/login:",
                      url_path="login", default=True)]
 
-nav = st.navigation(pages, position="sidebar" if role and not APP else "hidden")
+nav = st.navigation(pages, position="sidebar" if role and not MOBILE else "hidden")
+# ui.go("mypage")처럼 메뉴 이름으로 이동 (기본 페이지는 url_path가 비어 있어 이름을 따로 둔다)
+PAGE_KEYS = {"user": ["home", "ride", "mypage"], "admin": ["assets", "history", "members"]}
+st.session_state["_pages"] = dict(zip(PAGE_KEYS.get(role, ["login"]), pages))
 
-if role == "user":
-    from user_ops import get_user
+# DB 오류는 db.py에서 BusinessError("처리 중 오류가 발생했습니다 …")로 바뀌어 올라온다.
+# 화면 안에서 잡지 않은 오류도 스택 트레이스 대신 안내 문구로 보여준다.
+try:
+    if role == "user":
+        from user_ops import get_user
 
-    me = get_user(st.session_state["user_id"])
-    if not me or me["user_status"] == "WITHDRAWN":
-        logout()
-    status = "" if me["user_status"] == "ACTIVE" else f" · {ui.label(me['user_status'])}"
-    if APP:
-        app_bar(me["user_name"], status)
-        bottom_nav(pages, nav)
-    else:
-        sidebar(me["user_name"], "이용자", status)
-elif role == "admin":
-    from admin_ops import get_staff
+        me = get_user(st.session_state["user_id"])
+        if not me or me["user_status"] == "WITHDRAWN":
+            logout()
+        status = "" if me["user_status"] == "ACTIVE" else f" · {ui.label(me['user_status'])}"
+        mileage = f" · {ui.pt(me['user_mileage'])}"
+        if MOBILE:
+            app_bar(me["user_name"], mileage + status)
+            bottom_nav(pages, nav)
+        else:
+            sidebar(me["user_name"], "이용자", mileage + status)
+    elif role == "admin":
+        from admin_ops import get_staff
 
-    staff = get_staff(st.session_state["staff_id"])
-    if not staff or not staff["staff_is_active"]:
-        logout()
-    extra = f" · {staff['station_name']}" if staff["station_name"] else ""
-    sidebar(staff["staff_name"], "관리자", extra)
+        staff = get_staff(st.session_state["staff_id"])
+        if not staff or not staff["staff_is_active"]:
+            logout()
+        extra = f" · {staff['station_name']}" if staff["station_name"] else ""
+        sidebar(staff["staff_name"], "관리자", extra)
 
-nav.run()
+    nav.run()
+except BusinessError as e:
+    st.error(str(e))

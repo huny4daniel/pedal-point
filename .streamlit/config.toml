@@ -1,7 +1,7 @@
-# 밝은 모빌리티 앱 스타일 테마
-#   배경   #F4F6F5 (옅은 회녹색)   카드  #FFFFFF
-#   강조   #0A8A55 (초록)          브랜드 #0F2A1F (발표자료 표지의 숲 초록, 히어로·강조 카드)
-#   본문   #0F1A15                 글꼴  Pretendard
+# 모빌리티 앱 스타일 테마 (라이트 / 다크 두 벌)
+#   강조   #0A8A55·#12B76A (초록)   브랜드 #0F2A1F (발표자료 표지의 숲 초록, 머리말 배너·강조 카드)
+#   글꼴   Pretendard
+# 화면의 테마 버튼(해/달 아이콘)으로 바꾸고, 고르기 전에는 운영체제 설정을 따른다.
 
 [server]
 runOnSave = false
@@ -9,8 +9,15 @@ runOnSave = false
 [client]
 toolbarMode = "minimal"
 
+# 공통
 [theme]
-base = "light"
+baseRadius = "10px"
+buttonRadius = "10px"
+showWidgetBorder = true
+font = "Pretendard Variable:https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css, 'Malgun Gothic', sans-serif"
+headingFontWeights = [800, 700, 700, 600, 600, 600]
+
+[theme.light]
 primaryColor = "#0A8A55"
 backgroundColor = "#F4F6F5"
 secondaryBackgroundColor = "#EEF2EF"
@@ -19,14 +26,25 @@ linkColor = "#0A8A55"
 borderColor = "#DDE4E0"
 dataframeBorderColor = "#E6ECE8"
 dataframeHeaderBackgroundColor = "#F7F9F8"
-showWidgetBorder = true
-baseRadius = "10px"
-buttonRadius = "10px"
-font = "Pretendard Variable:https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css, 'Malgun Gothic', sans-serif"
-headingFontWeights = [800, 700, 700, 600, 600, 600]
 chartCategoricalColors = ["#12B76A", "#0F2A1F", "#7CD4A6", "#B8C4BE", "#0A8A55"]
 
-[theme.sidebar]
+[theme.light.sidebar]
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F4F6F5"
 borderColor = "#E6ECE8"
+
+[theme.dark]
+primaryColor = "#12B76A"
+backgroundColor = "#0C1411"
+secondaryBackgroundColor = "#1A2621"
+textColor = "#E6EFEA"
+linkColor = "#4ADE9B"
+borderColor = "#2A3832"
+dataframeBorderColor = "#26332D"
+dataframeHeaderBackgroundColor = "#16201C"
+chartCategoricalColors = ["#12B76A", "#7CD4A6", "#3E8F6A", "#5B6B64", "#4ADE9B"]
+
+[theme.dark.sidebar]
+backgroundColor = "#111A16"
+secondaryBackgroundColor = "#1A2621"
+borderColor = "#22302A"

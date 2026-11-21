@@ -21,7 +21,7 @@ if not exist ".streamlit\secrets.toml" (
     notepad ".streamlit\secrets.toml"
 )
 
-rem 3) padal DB가 없으면 생성 (run.bat --reset 이면 지우고 새로 생성)
+rem 3) pedal DB가 없으면 생성 (run.bat --reset 이면 지우고 새로 생성)
 .venv\Scripts\python.exe init_db.py %1 || goto :fail
 
 rem 4) 실행

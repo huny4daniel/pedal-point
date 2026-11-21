@@ -1,108 +1,166 @@
-"""이용자 · 대여소 검색·대여."""
+"""이용자 · 대여·반납 (한 메뉴에서 상황에 따라 화면이 바뀐다).
+
+- 결제 직후: 영수증
+- 대여 중: 반납 화면 (views/user_return.render_return)
+- 결제 대기 건을 결제하는 중: 결제 화면 (render_pending)
+- 그 밖: 대여 화면 — 검색 → 지도 핀(대여 가능 대수) → 대여소 정보 카드 → 자전거 선택 → 대여하기
+  결제하지 않은 대여가 있으면 위에 안내 카드
+"""
 import streamlit as st
 
 import rules
 import ui
 import user_ops
 from db import BusinessError
+from station_map import markers_for, station_map
+from views import user_return
+
+SEL_KEY = "rent_station"
 
 
-def _station_card(s: dict, selected: bool) -> None:
-    avail, docks = int(s["available_count"]), int(s["station_totaldocks"])
-    ratio = 0 if docks == 0 else min(avail / docks, 1) * 100
-    state = ui.badge("AVAILABLE", "대여 가능") if avail else ui.badge("INACTIVE", "자전거 없음")
-    key = f"ppcard_sel_{s['station_id']}" if selected else f"ppcard_st_{s['station_id']}"
-    with st.container(key=key):
+def _tone(_s: dict, count: int) -> str:
+    return "green" if count > 0 else "gray"
+
+
+def _sheet(user_id: int, s: dict | None, blocked: str | None, stations: list[dict]) -> None:
+    """지도에서 고른 대여소의 정보 카드. 아직 안 골랐으면 빌리기 좋은 대여소 목록."""
+    with st.container(key="ppcard_sheet"):
+        if s is None:
+            ui.card_title("지금 빌리기 좋은 대여소", "지도에서 핀을 누르거나 아래에서 바로 골라 보세요.")
+            top = sorted(stations, key=lambda x: -int(x["available_count"]))[:6]
+            for t in top:
+                n = int(t["available_count"])
+                if st.button(f"{t['station_name']} · {n}대", key=f"top_{t['station_id']}", width="stretch",
+                             icon=":material/pedal_bike:" if n else ":material/block:", disabled=n == 0):
+                    st.session_state[SEL_KEY] = t["station_id"]
+                    st.rerun()
+            st.markdown(
+                f'<div class="pp-fee" style="margin-top:.8rem"><span>기본 {rules.BASE_MINUTES}분 {ui.won(rules.BASE_FEE)}</span>'
+                f'<span>초과 {rules.EXTRA_UNIT_MINUTES}분마다 {ui.won(rules.EXTRA_UNIT_FEE)}</span>'
+                f'<span>1km 이동 = {rules.POINTS_PER_KM}P 적립</span></div>',
+                unsafe_allow_html=True,
+            )
+            return
+
+        avail, docks = int(s["available_count"]), int(s["station_totaldocks"])
+        state = ui.badge("AVAILABLE", "대여 가능") if avail else ui.badge("INACTIVE", "자전거 없음")
+        contact = f" · {ui.esc(s['station_contactnumber'])}" if s["station_contactnumber"] else ""
         st.markdown(
-            f'<div class="pp-station-top"><div class="pp-station-name">{s["station_name"]}</div>{state}</div>'
-            f'<div class="pp-station-addr">{s["station_region"]} · {s["station_address"]}</div>'
-            f'<div class="pp-avail"><b>{avail}</b><span>대 / 거치대 {docks}</span></div>'
-            f'<div class="pp-meter"><i style="width:{ratio:.0f}%"></i></div>',
+            f'<div class="pp-station-top"><div class="pp-sheet-name">{ui.esc(s["station_name"])}</div>{state}</div>'
+            f'<div class="pp-sheet-addr">{ui.esc(s["station_address"])}{contact}</div>'
+            f'<div class="pp-sheet-nums">'
+            f'<div class="pp-sheet-num{" on" if avail else ""}"><b>{avail}</b><span>대여 가능</span></div>'
+            f'<div class="pp-sheet-num"><b>{docks}</b><span>거치대</span></div>'
+            f'<div class="pp-sheet-num"><b>{ui.won(rules.BASE_FEE)}</b><span>기본 {rules.BASE_MINUTES}분</span></div>'
+            f"</div>",
             unsafe_allow_html=True,
         )
-        if st.button("선택됨" if selected else "이 대여소 선택", key=f"pick_{s['station_id']}",
-                     type="primary" if selected else "secondary", width="stretch",
-                     icon=":material/check:" if selected else None):
-            st.session_state["rent_station"] = s["station_id"]
-            st.rerun()
-
-
-def _rent_panel(user_id: int, station: dict | None) -> None:
-    with st.container(key="ppcard_rentpanel"):
-        if station is None:
-            ui.empty("🚲", "대여소를 선택하세요", "왼쪽 목록에서 대여소를 고르면<br>대여 가능한 자전거가 표시됩니다.")
+        if not avail:
+            st.caption("지금 빌릴 수 있는 자전거가 없어요. 지도에서 초록색 핀을 골라 보세요.")
+            return
+        if blocked:
+            st.error(blocked)
             return
 
-        ui.card_title(station["station_name"], f"{station['station_region']} · {station['station_address']}")
-        bikes = user_ops.available_bicycles(station["station_id"])
-        if not bikes:
-            ui.empty("⏳", "대여 가능한 자전거가 없어요", "다른 대여소를 선택해 주세요.")
-            return
-
-        me = user_ops.get_user(user_id)
-        if me["user_status"] != "ACTIVE":
-            st.error("이용정지 상태라 대여할 수 없습니다. 관리자에게 문의해 주세요.")
-            return
-
+        bikes = user_ops.available_bicycles(s["station_id"])
         bike_id = st.pills(
-            f"자전거 선택 · {len(bikes)}대",
-            [b["bicycle_id"] for b in bikes],
-            format_func=lambda b: f"#{b}",
-            default=bikes[0]["bicycle_id"],
-            key=f"bike_pick_{station['station_id']}",
+            "자전거 선택", [b["bicycle_id"] for b in bikes], format_func=lambda b: f"#{b}",
+            default=bikes[0]["bicycle_id"], key=f"bike_pick_{s['station_id']}",
         )
-        st.caption(f"기본 {rules.BASE_MINUTES}분 {ui.won(rules.BASE_FEE)} · 반납 시 이동거리만큼 마일리지가 적립됩니다.")
-        if st.button("대여하기", type="primary", width="stretch", disabled=bike_id is None,
-                     icon=":material/pedal_bike:"):
+        st.caption(f"초과 {rules.EXTRA_UNIT_MINUTES}분마다 {ui.won(rules.EXTRA_UNIT_FEE)} · "
+                   f"반납할 때 1km당 {rules.POINTS_PER_KM}P가 적립돼요.")
+        if st.button(f"자전거 #{bike_id} 대여하기" if bike_id else "자전거를 선택하세요", type="primary",
+                     width="stretch", disabled=bike_id is None, icon=":material/pedal_bike:", key="rent_go"):
             try:
-                rental_id = user_ops.rent_bicycle(user_id, station["station_id"], bike_id)
+                rental_id = user_ops.rent_bicycle(user_id, s["station_id"], bike_id)
             except BusinessError as e:
                 st.error(str(e))
             else:
-                st.session_state["rent_done"] = (
-                    f"자전거 #{bike_id} 대여를 시작했습니다 · 대여번호 {rental_id}"
-                )
-                st.session_state.pop("rent_station", None)
+                st.session_state["rent_done"] = f"자전거 #{bike_id} 대여를 시작했어요 · 대여번호 {rental_id}"
+                st.session_state.pop(SEL_KEY, None)
                 st.rerun()
 
 
 def render() -> None:
     user_id = st.session_state["user_id"]
-    ui.page_header("이용자", "대여소 검색·대여", "가까운 대여소를 찾고 바로 자전거를 빌려 보세요.")
-    if msg := st.session_state.pop("rent_done", None):
-        ui.done(msg, "반납은 ‘반납·결제’ 메뉴에서 할 수 있습니다.")
+    if receipt := st.session_state.pop("return_receipt", None):
+        ui.page_header("이용 완료", "반납·결제 완료")
+        user_return.show_receipt(receipt)
+        return
 
-    c1, c2 = st.columns([1, 2]) if not ui.is_app() else st.columns([1, 1.6])
-    region = c1.selectbox("지역", ["전체", *user_ops.regions()])
-    keyword = c2.text_input("대여소 이름", placeholder="이름으로 검색 (예: 정왕)",
-                            icon=":material/search:")
-    stations = user_ops.search_stations(None if region == "전체" else region, keyword.strip())
+    ongoing = user_ops.ongoing_rentals(user_id)
+    if ongoing:  # 1인 1대라 대여 중이면 반납 화면
+        user_return.render_return(user_id, ongoing[0], st.session_state.pop("rent_done", None))
+        return
 
-    sel_id = st.session_state.get("rent_station")
+    pending = user_ops.pending_rentals(user_id)
+    paying = {r["rental_id"]: r for r in pending}.get(st.session_state.get(user_return.PAY_KEY))
+    if paying:
+        user_return.render_pending(user_id, paying)
+        return
+    st.session_state.pop(user_return.PAY_KEY, None)
+    _rent_view(user_id, pending)
+
+
+def _rent_view(user_id: int, pending: list[dict]) -> None:
+    mobile = ui.is_mobile()
+    me = user_ops.get_user(user_id)
+    all_active = user_ops.search_stations("")
+    ui.page_header(
+        f"{ui.esc(me['user_name'])}님, 오늘도 가볍게 출발해요", "자전거 대여",
+        "" if mobile else "지도에서 대여소를 누르고 바로 자전거를 빌려 보세요.",
+        stats=[("보유 마일리지", ui.pt(me["user_mileage"])),
+               ("대여 가능 자전거", f"{sum(int(x['available_count']) for x in all_active)}대"),
+               ("운영 대여소", f"{len(all_active)}곳")],
+    )
+    if pending:
+        user_return.pending_banner(pending)
+
+    blocked = None
+    if me["user_status"] != "ACTIVE":
+        blocked = "이용이 정지된 회원입니다."
+        st.warning(blocked + " 관리자에게 문의해 주세요.", icon=":material/block:")
+    keyword = st.text_input("대여소 검색", placeholder="대여소 이름이나 주소 검색 (예: 정왕, 배곧)",
+                            icon=":material/search:", label_visibility="collapsed")
+    stations = user_ops.search_stations(keyword)
     by_id = {s["station_id"]: s for s in stations}
+    sel_id = st.session_state.get(SEL_KEY)
+    if sel_id not in by_id:
+        sel_id = None
+    if keyword.strip() and len(stations) == 1:  # 검색 결과가 하나면 바로 선택
+        sel_id = stations[0]["station_id"]
 
-    if not stations:
-        with st.container(key="ppcard_nostation"):
-            ui.empty("🔍", "조건에 맞는 대여소가 없어요", "지역이나 검색어를 바꿔 보세요.")
-        return
+    markers, missing = markers_for(stations, "available_count", _tone)
 
-    if ui.is_app():  # 스마트폰 앱: 한 줄 목록, 선택한 대여소 바로 아래에 대여 패널
-        st.markdown(f'<div class="pp-card-sub">운영 중인 대여소 {len(stations)}곳</div>',
-                    unsafe_allow_html=True)
-        for s in stations:
-            selected = s["station_id"] == sel_id
-            _station_card(s, selected)
-            if selected:
-                _rent_panel(user_id, s)
-        return
+    def map_block(height: int) -> None:
+        nonlocal sel_id
+        if not stations:
+            with st.container(key="ppcard_nostation"):
+                ui.empty("🔍", "검색 결과가 없어요", "다른 이름이나 주소로 검색해 보세요.")
+            return
+        ev = station_map("rent_map", markers, sel_id, height=height)
+        if "select" in ev and ev["select"] != st.session_state.get(SEL_KEY):
+            st.session_state[SEL_KEY] = ev["select"]
+            st.rerun()
+        st.markdown(
+            f'<div class="pp-legend"><span><i style="background:#12B76A"></i>대여 가능</span>'
+            f'<span><i style="background:#9AA6A0"></i>자전거 없음</span>'
+            f"<span>운영 중 대여소 {len(stations)}곳</span></div>",
+            unsafe_allow_html=True,
+        )
+        if missing:  # 좌표가 아직 없는 대여소는 버튼으로 고른다
+            st.caption("지도 위치가 등록되지 않은 대여소")
+            for s in missing:
+                if st.button(s["station_name"], key=f"nomap_{s['station_id']}", icon=":material/location_off:"):
+                    st.session_state[SEL_KEY] = s["station_id"]
+                    st.rerun()
 
-    left, right = st.columns([1.7, 1], gap="large")
-    with left:
-        st.markdown(f'<div class="pp-card-sub">운영 중인 대여소 {len(stations)}곳</div>',
-                    unsafe_allow_html=True)
-        cols = st.columns(2)
-        for i, s in enumerate(stations):
-            with cols[i % 2]:
-                _station_card(s, s["station_id"] == sel_id)
-    with right:
-        _rent_panel(user_id, by_id.get(sel_id))
+    if mobile:
+        map_block(360)
+        _sheet(user_id, by_id.get(sel_id), blocked, stations)
+    else:
+        left, right = st.columns([2.1, 1], gap="medium")
+        with left:
+            map_block(0)  # 창 아래까지 채움
+        with right:
+            _sheet(user_id, by_id.get(sel_id), blocked, stations)
