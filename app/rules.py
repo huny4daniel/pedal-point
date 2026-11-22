@@ -102,7 +102,11 @@ def carbon_level(carbon_g) -> dict:
 # ---------------------------------------------------------------- 계정
 LOGIN_ID_RE = re.compile(r"^[A-Za-z0-9]{4,20}$")
 PHONE_RE = re.compile(r"^010-\d{4}-\d{4}$")
-MIN_PASSWORD = 4
+MIN_PASSWORD = 4  # 마이페이지 비밀번호 변경용 (회원가입은 아래 PASSWORD_RE)
+
+# 회원가입 비밀번호: 영문·숫자·특수문자(@ - !)를 각각 1개 이상 포함한 8자 이상, 이 문자들만 허용
+PASSWORD_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@\-!])[A-Za-z\d@\-!]{8,}$")
+PASSWORD_RULE_TEXT = "영문·숫자·특수문자(@ - !)를 모두 포함해 8자 이상"
 
 
 def hash_password(password: str) -> str:
