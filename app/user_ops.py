@@ -28,8 +28,8 @@ def signup(login_id: str, password: str, password2: str, name: str, phone: str) 
     login_id, name, phone = login_id.strip(), name.strip(), phone.strip()
     if not rules.LOGIN_ID_RE.match(login_id):
         raise BusinessError("아이디는 영문·숫자 4~20자로 입력해 주세요.")
-    if len(password) < rules.MIN_PASSWORD:
-        raise BusinessError(f"비밀번호는 {rules.MIN_PASSWORD}자 이상이어야 합니다.")
+    if not rules.PASSWORD_RE.match(password):
+        raise BusinessError(f"비밀번호는 {rules.PASSWORD_RULE_TEXT}으로 입력해 주세요.")
     if password != password2:
         raise BusinessError("비밀번호 확인이 일치하지 않습니다.")
     name, phone = _check_name_phone(name, phone)
